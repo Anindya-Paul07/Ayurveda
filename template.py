@@ -12,7 +12,11 @@ list_of_files= [
     ".env",
     "setup.py",
     "app.py",
-    "research/trials.ipynb"
+    "research/trials.ipynb",
+    "static/css/main.css",
+    "static/css/chat.css",
+    "static/js/chat.js",
+    "symptom_trainer.py"
 ]
 
 

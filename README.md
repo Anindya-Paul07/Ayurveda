@@ -27,12 +27,15 @@ conda activate herbbot
 ```bash
 pip install -r requirements.txt
 ```
-### create a '.env' file in the root directory and add your Pinecone & openai credentials as follow:
+### create a '.env' file in the root directory and add your Pinecone, OpenAI, and SERP API credentials as follow:
 
 ```ini
 PINECONE_API_KEY = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 OPENAI_API_KEY = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+SERP_API_KEY = "YOUR_SERP_API_KEY"
 ```
+
+The SERP API key is required for the Google search fallback functionality, which allows the assistant to retrieve up-to-date information when it doesn't have sufficient context in its knowledge base.
 
 ### create the knowledge base for the bot:
 
