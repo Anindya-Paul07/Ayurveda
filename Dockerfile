@@ -1,11 +1,10 @@
 # Base image
-FROM python:3.10-slim-buster
+FROM python:3.11-slim-buster
 
 WORKDIR /app
 
-FROM python:3.11-slim
-
-WORKDIR /app
+# Set environment variable for unbuffered output
+ENV PYTHONUNBUFFERED=1
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -15,19 +14,28 @@ RUN apt-get update && apt-get install -y \
 
 # Install Python dependencies
 COPY requirements.txt .
+COPY setup.py .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
 COPY app.py .
-COPY wsgi.py .
 COPY service/ service/
 COPY templates/ templates/
+
+# Copy environment file
+COPY .env .
+
+# Copy the Data directory containing PDFs
+COPY Data/ Data/
+
+# Create wsgi.py file
+RUN echo 'from app import app\nif __name__ == "__main__":\n    app.run()' > wsgi.py
 
 # Non-root user
 RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser
 
-EXPOSE 5000
+EXPOSE 8080
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "3", "wsgi:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "3", "wsgi:app"]

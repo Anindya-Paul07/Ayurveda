@@ -1,0 +1,12 @@
+[Unit]
+Description=Ayurveda Chatbot Container
+Requires=docker.service
+After=docker.service
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/docker start -a ayurveda-app
+ExecStop=/usr/bin/docker stop -t 2 ayurveda-app
+
+[Install]
+WantedBy=multi-user.target
