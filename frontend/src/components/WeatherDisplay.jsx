@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { fetchWeather } from '../services/api';
+import { fetchWeather, fetchUnifiedRecommendations } from '../services/api';
 
 function WeatherDisplay() {
   const [weather, setWeather] = useState(null);
@@ -7,9 +7,15 @@ function WeatherDisplay() {
   const [country, setCountry] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [recommendations, setRecommendations] = useState(null);
+  const [loadingRec, setLoadingRec] = useState(false);
+  const [errorRec, setErrorRec] = useState(null);
 
   const handleFetchWeather = async () => {
-    if (!city) return;
+    if (!city) {
+      setError('Please enter a city name');
+      return;
+    }
     
     setLoading(true);
     setError(null);
@@ -17,6 +23,8 @@ function WeatherDisplay() {
     try {
       const data = await fetchWeather(city, country);
       setWeather(data);
+      // Reset recommendations when new weather is fetched
+      setRecommendations(null);
     } catch (err) {
       setError(err.message || 'Failed to fetch weather data');
     } finally {
@@ -24,9 +32,45 @@ function WeatherDisplay() {
     }
   };
 
+  const handleFetchRecommendations = async () => {
+    // Retrieve stored dosha result, if any
+    let dosha = '';
+    try {
+      const doshaData = localStorage.getItem('doshaResult');
+      if (doshaData) {
+        const parsedData = JSON.parse(doshaData);
+        dosha = parsedData && parsedData.dosha ? parsedData.dosha : '';
+      }
+    } catch (err) {
+      console.error('Error parsing dosha data from localStorage:', err);
+    }
+    
+    // Construct payload; you can add time_of_day, health_concern, or query as needed
+    const payload = {
+      dosha: dosha,
+      city,
+      country,
+      season: weather && weather.season ? weather.season : '',
+      limit: 5
+    };
+    setLoadingRec(true);
+    setErrorRec(null);
+    try {
+      const data = await fetchUnifiedRecommendations(payload);
+      setRecommendations(data.recommendations);
+    } catch (err) {
+      setErrorRec(err.message || 'Failed to fetch recommendations');
+    } finally {
+      setLoadingRec(false);
+    }
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
     handleFetchWeather();
+    // Clear any existing recommendations when searching for new weather
+    setRecommendations(null);
+    setErrorRec(null);
   };
 
   return (
@@ -42,6 +86,7 @@ function WeatherDisplay() {
               value={city}
               onChange={(e) => setCity(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              data-cy="city-input"
               required
             />
           </div>
@@ -52,12 +97,14 @@ function WeatherDisplay() {
               value={country}
               onChange={(e) => setCountry(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              data-cy="country-input"
             />
           </div>
           <button 
             type="submit" 
             className="px-6 py-2 bg-primary text-white rounded hover:bg-primary-dark transition-colors duration-300 disabled:opacity-50"
             disabled={!city || loading}
+            data-cy="get-weather-button"
           >
             {loading ? 'Searching...' : 'Search'}
           </button>
@@ -77,7 +124,7 @@ function WeatherDisplay() {
       )}
       
       {weather && !loading && !error && (
-        <div className="p-6 border border-gray-200 rounded-lg shadow-sm bg-gray-50">
+        <div className="p-6 border border-gray-200 rounded-lg shadow-sm bg-gray-50" data-cy="weather-data">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
             <h3 className="text-xl font-semibold">{weather.city}{weather.country ? `, ${weather.country}` : ''}</h3>
             {weather.weather_icon && (
@@ -131,9 +178,37 @@ function WeatherDisplay() {
           </div>
           
           {weather.ayurvedic_recommendation && (
-            <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg" data-cy="weather-recommendations">
               <h4 className="font-semibold text-green-800 mb-2">Ayurvedic Weather Insight:</h4>
               <p className="text-green-700">{weather.ayurvedic_recommendation}</p>
+            </div>
+          )}
+          
+          <button 
+            onClick={handleFetchRecommendations} 
+            disabled={loadingRec} 
+            className="mt-4 px-4 py-2 bg-secondary text-white rounded hover:bg-opacity-90 transition-colors duration-300"
+          >
+            {loadingRec ? 'Fetching Recommendations...' : 'Get Ayurvedic Recommendations'}
+          </button>
+          
+          {errorRec && (
+            <div className="p-4 mt-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">
+              <span className="font-medium">Error:</span> {errorRec}
+            </div>
+          )}
+          
+          {recommendations && (
+            <div className="mt-6 p-4 border rounded bg-gray-50" data-cy="weather-recommendations">
+              <h4 className="font-semibold mb-3">Personalized Recommendations:</h4>
+              <ul className="space-y-3">
+                {recommendations.map((item, index) => (
+                  <li key={index} className="p-3 bg-white rounded shadow-sm">
+                    <p className="mb-1">{item.content}</p>
+                    <small className="text-gray-600">Classification: {item.classification} | Relevance: {item.relevance_score.toFixed(2)}</small>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>

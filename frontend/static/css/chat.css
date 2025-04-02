@@ -1,5 +1,5 @@
-/* Chat Overlay */
-.chat-overlay {
+/* Legacy Chat Styles Scoped under .legacy-chat */
+.legacy-chat .chat-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -11,16 +11,14 @@
   display: none;
 }
 
-/* Chat Wrapper */
-.chat-wrapper {
+.legacy-chat .chat-wrapper {
   position: fixed;
   bottom: 2rem;
   right: 2rem;
   z-index: 1004;
 }
 
-/* Chat Toggle Button */
-.chat-toggle {
+.legacy-chat .chat-toggle {
   background: var(--primary);
   color: white;
   border: none;
@@ -36,17 +34,16 @@
   z-index: 1005;
 }
 
-.chat-toggle:hover {
+.legacy-chat .chat-toggle:hover {
   transform: scale(1.1);
   background: var(--secondary);
 }
 
-.chat-toggle i {
+.legacy-chat .chat-toggle i {
   font-size: 1.5rem;
 }
 
-/* Chat Container */
-.chat-container {
+.legacy-chat .chat-container {
   position: fixed;
   top: 50%;
   left: 50%;
@@ -63,8 +60,7 @@
   overflow: hidden;
 }
 
-/* Chat Header */
-.chat-header {
+.legacy-chat .chat-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -73,11 +69,11 @@
   color: white;
 }
 
-.chat-tabs {
+.legacy-chat .chat-tabs {
   display: flex;
 }
 
-.tab-btn {
+.legacy-chat .tab-btn {
   background: transparent;
   color: var(--text-light);
   border: none;
@@ -88,12 +84,12 @@
   transition: opacity var(--transition), border-bottom var(--transition);
 }
 
-.tab-btn.active {
+.legacy-chat .tab-btn.active {
   opacity: 1;
   border-bottom: 3px solid white;
 }
 
-.close-chat {
+.legacy-chat .close-chat {
   background: none;
   border: none;
   color: white;
@@ -101,27 +97,25 @@
   cursor: pointer;
 }
 
-/* Chat Body */
-.chat-body {
+.legacy-chat .chat-body {
   flex: 1;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-.chat-content {
+.legacy-chat .chat-content {
   flex: 1;
   padding: 1rem;
   overflow-y: auto;
   display: none;
 }
 
-.chat-content.active {
+.legacy-chat .chat-content.active {
   display: block;
 }
 
-/* Messages */
-.message {
+.legacy-chat .message {
   max-width: 80%;
   padding: 0.8rem 1.2rem;
   margin: 0.5rem 0;
@@ -130,28 +124,27 @@
   animation: fadeIn 0.3s ease;
 }
 
-.user-message {
+.legacy-chat .user-message {
   background: var(--light);
   margin-left: auto;
   border-bottom-right-radius: 4px;
 }
 
-.bot-message {
+.legacy-chat .bot-message {
   background: var(--primary);
   color: white;
   margin-right: auto;
   border-bottom-left-radius: 4px;
 }
 
-/* Chat Footer */
-.chat-footer {
+.legacy-chat .chat-footer {
   display: flex;
   padding: 1rem;
   background: #f8f9fa;
   border-top: 1px solid #eee;
 }
 
-.chat-footer input {
+.legacy-chat .chat-footer input {
   flex: 1;
   padding: 0.8rem 1rem;
   border: 1px solid #ddd;
@@ -159,7 +152,7 @@
   font-size: 1rem;
 }
 
-.send-btn {
+.legacy-chat .send-btn {
   background: var(--primary);
   color: white;
   border: none;
@@ -170,12 +163,11 @@
   transition: background-color var(--transition);
 }
 
-.send-btn:hover {
+.legacy-chat .send-btn:hover {
   background: var(--secondary);
 }
 
-/* Yes/No Buttons */
-.yes-no-buttons {
+.legacy-chat .yes-no-buttons {
   display: flex;
   gap: 1rem;
   justify-content: center;
@@ -183,7 +175,8 @@
   margin-top: 0.5rem;
 }
 
-.btn-yes, .btn-no {
+.legacy-chat .btn-yes, 
+.legacy-chat .btn-no {
   padding: var(--button-padding);
   border: none;
   border-radius: var(--button-border-radius);
@@ -192,49 +185,49 @@
   transition: background-color var(--transition);
 }
 
-.btn-yes {
+.legacy-chat .btn-yes {
   background: #4CAF50;
   color: white;
 }
 
-.btn-no {
+.legacy-chat .btn-no {
   background: #f44336;
   color: white;
 }
 
-.btn-yes:hover {
+.legacy-chat .btn-yes:hover {
   background: #45a049;
 }
 
-.btn-no:hover {
+.legacy-chat .btn-no:hover {
   background: #d32f2f;
 }
 
-.bot-message.warning {
+.legacy-chat .bot-message.warning {
   background-color: #FFF3CD;
   color: #856404;
   border-left: 4px solid #FFC107;
 }
 
-.bot-message.error {
+.legacy-chat .bot-message.error {
   background-color: #F8D7DA;
   color: #721C24;
   border-left: 4px solid #DC3545;
 }
 
-.list-number {
+.legacy-chat .list-number {
   font-weight: bold;
   color: var(--primary);
 }
 
-.symptom-progress {
+.legacy-chat .symptom-progress {
   margin: 0.5rem 0;
   font-size: 0.9rem;
   color: var(--primary);
   text-align: center;
 }
 
-.diagnosis-card {
+.legacy-chat .diagnosis-card {
   background: #f8f9fa;
   border-radius: 8px;
   padding: 1rem;
@@ -242,19 +235,18 @@
   border-left: 4px solid var(--primary);
 }
 
-.diagnosis-title {
+.legacy-chat .diagnosis-title {
   font-weight: bold;
   color: var(--primary);
   margin-bottom: 0.5rem;
 }
 
-.remedy-item {
+.legacy-chat .remedy-item {
   margin-bottom: 0.5rem;
   padding-left: 1rem;
   border-left: 2px solid var(--accent);
 }
 
-/* Animations */
 @keyframes fadeIn {
   from {
       opacity: 0;
@@ -265,13 +257,13 @@
       transform: translateY(0);
   }
 }
-/* Responsive Chat */
+
 @media (max-width: 768px) {
-  .chat-container {
+  .legacy-chat .chat-container {
       height: 85vh;
   }
   
-  .chat-toggle {
+  .legacy-chat .chat-toggle {
       width: 50px;
       height: 50px;
   }

@@ -18,6 +18,8 @@ Clone the repository
 git clone https://github.com/Anindya2369/ayurveda.git
 ```
 
+After cloning the repository, navigate to the frontend directory and run 'npm install' to install all frontend dependencies.
+
 ### step 01- Create a conda environment after opening the repository
 
 ```bash
@@ -59,21 +61,62 @@ mkdir -p Data
 python store_index.py
 ```
 
-For more details on the knowledge base generation process, refer to the `store_index.py` file.
+### step 05.1 - Build the React frontend
 
-### step 06- Initialize the bot's backend and frontend:
+Navigate to the frontend directory, install dependencies, and build the production-ready React assets. Note that a new dependency, 'dompurify', has been added to support text sanitization and no paid modules are used.
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+This builds a fully React-based frontend whose assets are served by the Flask backend.
+
+### step 06- Initialize the unified backend server:
+
+Start the Flask application which consolidates all routes via blueprints and serves the static React assets.
 
 ```bash
 python app.py
 ```
 
-### step 07- Check the app deployed on localhost:
+### step 07- Check the deployed application on localhost:
 
 ```bash
 # Open your browser and navigate to http://localhost:8080
 ```
 
 The application runs on port 8080 by default.
+
+## How to run tests?
+### Running Backend Tests
+Execute the following command to run backend tests using pytest:
+```bash
+pytest ./tests/backend
+```
+
+### Running Frontend Tests
+Navigate to the frontend directory and run the following command to execute frontend tests using npm:
+```bash
+npm test
+```
+Note: The integration:test script uses cross-env to set NODE_PATH=./node_modules so that when the integration test (located in ../tests/integration) is executed, it uses the dependencies from the frontend/node_modules directory.
+
+### Using the run_tests.sh Script
+You can also run all tests using the provided script. From the root directory, execute:
+```bash
+sh run_tests.sh
+```
+
+## Unified Architecture
+
+This application has been refactored to use a centralized Flask backend that integrates multiple blueprints for different functionalities:
+- Dosha determination
+- Weather data retrieval
+- Personalized recommendations
+
+The frontend is now fully built using React and is served as static assets by the Flask backend, ensuring a seamless unified experience.
 
 ## Weather Feature
 
@@ -129,6 +172,7 @@ Note: Before running the Docker container, make sure you have:
 1. Created the `.env` file with your API credentials
 2. Added your PDF files to the Data directory
 3. Run `store_index.py` to create the Pinecone index
+4. Built the React frontend using `npm install` and `npm run build` in the frontend directory
 
 ## Security Considerations
 

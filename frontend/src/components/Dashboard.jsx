@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchRecommendations } from '../services/api';
+import logger from '../utils/logger';
 
 function Dashboard() {
   const [recommendations, setRecommendations] = useState([]);
@@ -16,7 +17,7 @@ function Dashboard() {
       setRecommendations(data.recommendations || []);
     } catch (err) {
       setError('Failed to fetch recommendations. Please try again later.');
-      console.error('Recommendation fetch error:', err);
+      logger.error('Recommendation fetch error:', err);
     } finally {
       setLoading(false);
     }

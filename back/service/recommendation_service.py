@@ -8,7 +8,7 @@ from pinecone.grpc import PineconeGRPC as Pinecone
 from langchain_pinecone import PineconeVectorStore
 
 # Import helper function to download embeddings for text conversion
-from service.helper import download_hugging_face_embeddings
+from back.service.helper import download_hugging_face_embeddings
 
 # Load environment variables from a .env file
 load_dotenv()

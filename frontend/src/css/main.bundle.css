@@ -1,0 +1,16 @@
+/* Tailwind CSS Directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom CSS Variables */
+:root {
+    --primary-color: #3490dc;
+    --secondary-color: #ffed4a;
+    --spacing-sm: 1rem;
+}
+
+/* Additional Styles */
+.hero-buttons {
+    padding: var(--spacing-sm);
+}

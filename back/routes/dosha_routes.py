@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from service.dosha_service import determine_dosha
+from back.service.dosha_service import determine_dosha
 
 # Create a blueprint for dosha-related routes
 dosha_blueprint = Blueprint('dosha', __name__)
@@ -33,7 +33,12 @@ def get_dosha():
     """
     try:
         # Get the JSON data from the request
-        data = request.get_json()
+        try:
+            data = request.get_json()
+            if data is None:
+                return jsonify({'error': 'Invalid JSON format or Content-Type not set to application/json'}), 400
+        except Exception as json_error:
+            return jsonify({'error': f'Invalid JSON format: {str(json_error)}'}), 400
         
         # Validate the input data
         if not data or 'responses' not in data:

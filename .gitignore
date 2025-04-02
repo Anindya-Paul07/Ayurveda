@@ -172,3 +172,52 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Node Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs (for frontend build artifacts)
+build/
+dist/
+**/build/
+**/dist/
+
+# Generated CSS bundle (from Tailwind configuration build)
+**/static/css/main.bundle.css
+
+# Python bytecode and cache
+*.py[cod]
+__pycache__/
+
+# Python virtual environments (adjust names as needed)
+venv/
+env/
+.venv/
+ENV/
+.env/
+
+# Python package build artifacts
+*.egg-info/
+
+# Sensitive keys and files
+ACCESSKEY.pem
+
+# Documentation and non-coding files (if you want to exclude these from your remote)
+*.doc
+*.docx
+ayur/
+NEW_DOCS/
+Optional/
+
+# Operating System files
+.DS_Store
+
+# Log files
+*.log
+
+# Cypress generated files (if applicable)
+cypress/videos/
+cypress/screenshots/
+ayurveda/frontend/cypress/videos/
+ayurveda/frontend/cypress/screenshots/

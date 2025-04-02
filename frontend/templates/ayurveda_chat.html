@@ -3,18 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ayurvedic Wellness Hub</title>
+    <title>Ayurveda Health Assistant</title>
     <!-- Favicon -->
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    <!-- CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+    <!-- CSS - Single compiled Tailwind CSS file -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.bundle.css') }}">
     <!-- Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
+    <!-- React Application Root -->
+    <div id="root"></div>
+    <header class="assistant-header">
+      <h1>Ayurveda Health Assistant</h1>
+    </header>
+    
+    <!-- Tab Interface for switching between Home, Dosha Quiz, and Weather Recommendations -->
+    <section id="interactive-tabs" class="py-12 bg-light">
+        <div class="container mx-auto px-4">
+            <div class="tab-header flex justify-center mb-6">
+                <button class="tab-btn active px-4 py-2 mx-2 border-b-2 border-secondary" data-tab="home">Home</button>
+                <button class="tab-btn px-4 py-2 mx-2 border-b-2 border-transparent" data-tab="dosha">Dosha Quiz</button>
+                <button class="tab-btn px-4 py-2 mx-2 border-b-2 border-transparent" data-tab="weather">Weather Recommendation</button>
+            </div>
+            <div class="tab-content">
+                <!-- Home Tab Panel -->
+                <div id="home-tab" class="tab-panel block">
+                    
     <!-- Navigation -->
     <nav class="main-nav">
         <div class="container">
@@ -149,7 +166,36 @@
             </div>
         </div>
     </section>
-    <!-- Floating Chat Interface -->
+                </div>
+                
+                <!-- Dosha Quiz Tab Panel -->
+                <div id="dosha-tab" class="tab-panel hidden">
+                    <div id="dosha-quiz-container" class="container mx-auto px-4 py-8">
+                        <h2 class="section-title">Dosha Analysis Quiz</h2>
+                        <p class="text-center mb-8">Discover your unique Ayurvedic constitution by taking our comprehensive Dosha quiz.</p>
+                        <div class="bg-white p-6 rounded-lg shadow-md">
+                            <p>Dosha Analysis Quiz will be loaded here.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Weather Recommendation Tab Panel -->
+                <div id="weather-tab" class="tab-panel hidden">
+                    <div id="weather-container" class="container mx-auto px-4 py-8">
+                        <h2 class="section-title">Weather Based Food Recommendation</h2>
+                        <p class="text-center mb-8">Get personalized food recommendations based on your local weather conditions.</p>
+                        <div class="bg-white p-6 rounded-lg shadow-md">
+                            <p>Weather Based Food Recommendation will be loaded here.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Removed the duplicate vanilla JS chat implementation to avoid conflicts with the React ChatComponent -->
+    <!-- Commenting out the floating chat interface block -->
+    <!--
     <div id="chatOverlay" class="chat-overlay"></div>
     <div class="chat-wrapper">
         <button class="chat-toggle" aria-label="Toggle chat interface">
@@ -174,9 +220,41 @@
             </div>
         </div>
     </div>
+    -->
 
     <!-- JavaScript -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
-    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    <!-- React application bundle will be included by the build process -->
+    
+    <!-- Tab Switching Script -->
+    <script>
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabPanels = {
+            home: document.getElementById('home-tab'),
+            dosha: document.getElementById('dosha-tab'),
+            weather: document.getElementById('weather-tab'),
+        };
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Remove active class from all buttons
+                tabButtons.forEach(btn => {
+                    btn.classList.remove('active', 'border-secondary');
+                    btn.classList.add('border-transparent');
+                });
+                
+                // Hide all tab panels
+                Object.values(tabPanels).forEach(panel => panel.classList.add('hidden'));
+                
+                // Activate the clicked button
+                button.classList.add('active', 'border-secondary');
+                button.classList.remove('border-transparent');
+                
+                const tabKey = button.getAttribute('data-tab');
+                tabPanels[tabKey].classList.remove('hidden');
+                tabPanels[tabKey].classList.add('block');
+            });
+        });
+    </script>
 </body>
 </html>

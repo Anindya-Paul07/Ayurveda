@@ -10,6 +10,12 @@ and integrates various services including:
 
 The application uses blueprints to organize routes and provides a comprehensive
 API for Ayurvedic health information and personalized recommendations.
+
+This centralized backend integrates with the React frontend by serving
+static assets from the frontend directory and providing API endpoints that
+the React components interact with. Environment variables for services like
+Pinecone, OpenWeatherMap, and OpenAI are loaded using dotenv, ensuring they are
+free and open-source options.
 """
 
 # Standard library imports
@@ -21,7 +27,8 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Third-party imports
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, Request
+from flask_cors import CORS
 from dotenv import load_dotenv
 from langchain_pinecone import PineconeVectorStore
 from langchain_openai import ChatOpenAI
@@ -38,6 +45,7 @@ from back.service.google_search import execute_google_search
 from back.routes.dosha_routes import dosha_blueprint
 from back.routes.weather_routes import weather_bp
 from back.routes.recommendations_routes import recommendations_bp
+from back.routes.health_routes import health_bp
 
 # -------------------------------------------------------------------------
 # Disease and Remedy Tracking System
@@ -105,10 +113,11 @@ def extract_remedies(disease, bot_answer):
 # Flask Application Setup
 # -------------------------------------------------------------------------
 
-# Initialize Flask application
+# Initialize Flask application with centralized configuration for integration with React frontend
 app = Flask(__name__)
+CORS(app)
 
-# Load environment variables from .env file
+# Load environment variables from .env file to ensure free/open-source service integration
 load_dotenv()
 
 # Register blueprints for the API endpoints
@@ -116,6 +125,7 @@ load_dotenv()
 app.register_blueprint(dosha_blueprint)  # /api/dosha - Determines user's dosha based on questionnaire
 app.register_blueprint(weather_bp)       # /api/weather - Provides weather data for location-based recommendations
 app.register_blueprint(recommendations_bp)  # /api/recommendations - Delivers personalized Ayurvedic recommendations
+app.register_blueprint(health_bp)
 
 # Note: Detailed API documentation is available in the docstrings of each route
 
@@ -176,7 +186,8 @@ def index():
     Returns:
         Rendered HTML template with disease tracking data
     """
-    return render_template('../templates/ayurveda_chat.html', diseases=tracked_diseases)
+    app.logger.debug('Serving template: index.html')
+    return render_template('index.html', diseases=tracked_diseases)
 
 
 @app.route("/api/general", methods=["GET", "POST"])
@@ -201,22 +212,34 @@ def chat():
         400: Invalid input
     """
     # Parse and validate the request data
-    data = request.get_json()
+    print('Raw request data:', request.data)
+    try:
+        data = request.get_json()
+        print('Parsed JSON data:', data)
+    except Exception as e:
+        print('JSON parsing error:', str(e))
+        return jsonify({'error': 'Invalid JSON format'}), 400
+    
     if not data or 'message' not in data:
-        return jsonify({"error": "Invalid input"}), 400
+        print('Missing "message" field in data:', data)
+        return jsonify({'error': "Missing 'message' field"}), 400
     
     # Extract the user message
     msg = data.get('message')
     print(f"Received message: {msg}")
     
-    # Process the message through the RAG pipeline
-    response = rag_chain.invoke({"input": msg})
+    # Process the message through the RAG pipeline with error handling
+    try:
+        response = rag_chain.invoke({"input": msg})
+    except Exception as e:
+        print('Error during rag_chain.invoke:', str(e))
+        return jsonify({"error": "Internal server error while processing your message. Please try again later."}), 500
     answer = response.get("answer")
     
     # Fallback to Google search if the local context was insufficient
     if not answer or "don't know" in answer.lower() or "i don't have" in answer.lower():
         google_result = execute_google_search(msg)
-        answer = f"Based on additional research, here are some results:\n\n{google_result}"
+        answer = f"Based on my search: {google_result}"
     
     print(f"Response: {answer}")
     
@@ -287,8 +310,6 @@ def track_remedy(user_msg, bot_answer):
                     tracked_diseases[disease]['remedies'].append(bot_answer)
 
 
-
-
 @app.route('/api/remedies', methods=['GET'])
 def get_remedies():
     """
@@ -337,6 +358,6 @@ if __name__ == '__main__':
     - /api/recommendations: Get personalized Ayurvedic recommendations (GET)
       based on dosha, season, and other factors
     """
-    # Set the template folder to the parent directory's templates folder
-    app.template_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'templates')
+    app.template_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend', 'build')
+    app.static_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend', 'build', 'static')
     app.run(host="0.0.0.0", port=8080, debug=True)

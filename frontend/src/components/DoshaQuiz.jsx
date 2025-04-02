@@ -107,21 +107,52 @@ function DoshaQuiz() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Check if all questions are answered
-    if (Object.keys(responses).length < quizQuestions.length) {
-      setError('Please answer all questions before submitting');
-      return;
-    }
+    // Create a copy of the current responses
+    const completeResponses = { ...responses };
+    
+    // Auto-fill any unanswered questions with the first option's value
+    quizQuestions.forEach(question => {
+      if (!completeResponses[question.id]) {
+        completeResponses[question.id] = question.options[0].value;
+      }
+    });
+    
+    // Update the responses state with the complete set
+    setResponses(completeResponses);
     
     setIsSubmitting(true);
     setError(null);
     
     try {
-      const data = await fetchDosha(responses);
+      const data = await fetchDosha(completeResponses);
       setResult(data);
       setError(null);
+      
+      // Validate that we have the expected data structure before storing
+      if (data && data.dosha) {
+        // Store dosha result in localStorage for use by WeatherDisplay component
+        localStorage.setItem('doshaResult', JSON.stringify(data));
+      } else {
+        console.error('Invalid dosha result format:', data);
+        setError('Received invalid dosha result format from server');
+      }
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to submit quiz. Please check your connection and try again.');
+      console.error('Error fetching dosha:', err);
+      // Clear any previous result from localStorage if there's an error
+      localStorage.removeItem('doshaResult');
+      
+      // Handle different error scenarios
+      if (err.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        setError(err.response.data?.error || `Server error: ${err.response.status}`);
+      } else if (err.request) {
+        // The request was made but no response was received
+        setError('No response from server. Please check your connection and try again.');
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        setError(err.message || 'Failed to submit quiz. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -130,7 +161,7 @@ function DoshaQuiz() {
   const progressPercentage = Math.round((Object.keys(responses).length / quizQuestions.length) * 100);
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md">
+    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md" data-cy="dosha-quiz-container">
       <h2 className="text-3xl font-bold mb-6 text-center text-primary">Discover Your Dosha</h2>
       <p className="mb-6 text-gray-600 text-center">
         Answer the following questions to discover your Ayurvedic constitution (Dosha).
@@ -147,8 +178,12 @@ function DoshaQuiz() {
       <p className="text-sm text-gray-500 mb-6 text-right">{progressPercentage}% complete</p>
       
       <form onSubmit={handleSubmit} className="space-y-8">
-        {quizQuestions.map((q) => (
-          <div key={q.id} className="p-4 border border-gray-200 rounded-lg hover:border-primary transition-colors">
+        {quizQuestions.map((q, index) => (
+          <div 
+            key={q.id} 
+            className="p-4 border border-gray-200 rounded-lg hover:border-primary transition-colors"
+            data-cy={`question-${index+1}`}
+          >
             <p className="font-semibold text-lg mb-3">{q.question}</p>
             <div className="space-y-2">
               {q.options.map((option) => (
@@ -159,6 +194,7 @@ function DoshaQuiz() {
                       ? 'bg-primary-light border-primary' 
                       : 'border-gray-200 hover:bg-gray-50'
                   }`}
+                  data-cy={`option-${option.value}`}
                 >
                   <div className="flex items-center">
                     <input
@@ -185,6 +221,7 @@ function DoshaQuiz() {
               : 'bg-primary hover:bg-primary-dark'
           }`}
           disabled={isSubmitting}
+          data-cy="submit-quiz-button"
         >
           {isSubmitting ? 'Analyzing...' : 'Submit Quiz'}
         </button>
@@ -197,11 +234,11 @@ function DoshaQuiz() {
       )}
       
       {result && (
-        <div className="mt-8 p-6 border-2 border-primary rounded-lg shadow-lg bg-primary-light">
+        <div className="mt-8 p-6 border-2 border-primary rounded-lg shadow-lg bg-primary-light" data-cy="dosha-result">
           <h3 className="text-2xl font-bold mb-3">Your Dosha: <span className="text-primary">{result.dosha}</span></h3>
           <p className="text-gray-700 leading-relaxed">{result.message}</p>
           
-          <div className="mt-6 pt-4 border-t border-gray-200">
+          <div className="mt-6 pt-4 border-t border-gray-200" data-cy="dosha-recommendations">
             <p className="font-medium text-gray-700">
               Your personalized food and lifestyle recommendations are now available on your dashboard.
             </p>

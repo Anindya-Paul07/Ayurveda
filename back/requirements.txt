@@ -1,6 +1,6 @@
 sentence-transformers
 langchain
-flask
+flask==2.1.0
 pypdf
 python-dotenv
 pinecone-client[grpc]==3.2.2
@@ -15,4 +15,7 @@ flask_cors
 bs4
 google-search-results
 requests
+flask-RESTful
+pytest==7.3.1
+werkzeug==2.3.7
 -e .

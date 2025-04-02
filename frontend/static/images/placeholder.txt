@@ -1,0 +1,20 @@
+Add featured article images (e.g., dosha-types.jpg, seasonal-practices.jpg, etc.) to this directory.
+
+This directory is intended for storing images used in featured articles throughout the Ayurveda application.
+
+Recommended image formats:
+- JPG/JPEG for photographs
+- PNG for graphics with transparency
+- SVG for vector graphics and icons
+
+Suggested naming convention:
+- Use lowercase letters
+- Separate words with hyphens
+- Include descriptive names related to the article content
+
+Examples of expected images:
+- dosha-types.jpg
+- seasonal-practices.jpg
+- ayurvedic-herbs.jpg
+- meditation-techniques.png
+- yoga-poses.jpg
