@@ -44,7 +44,7 @@ const ChatComponent = ({ isOpen }) => {
       };
       setMessages([welcomeMessage]);
     }
-  }, []);
+  }, [messages.length, WELCOME_MESSAGE]);
 
   // Load chat history from localStorage when component mounts
   useEffect(() => {
@@ -339,17 +339,10 @@ const ChatComponent = ({ isOpen }) => {
               </div>
             )
           ) : (
-            <div className="text-center text-gray-500 py-8">
-              {messages.length > 0 ? (
-                <div className="flex flex-col">
-                  <h3 className="font-medium mb-4">Chat History</h3>
-                  {renderMessages()}
-                </div>
-              ) : (
-                <p>Your chat history will appear here once you start a conversation</p>
-              )}
-            </div>
-          )}
+            <div className="flex-1 p-4 overflow-y-auto bg-transparent">
+    {renderChatHistory()}
+  </div>
+)}
         </div>
 
         {/* Chat Input - Only show in chat tab */}
