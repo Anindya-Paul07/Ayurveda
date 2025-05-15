@@ -15,7 +15,7 @@
         "src": "back/app.py",
         "use": "@vercel/python",
         "config": {
-          "maxLambdaSize": "15mb",  // Increased for your dependencies
+          "maxLambdaSize": "15mb",  
           "runtime": "python3.9",
           "includeFiles": [
             "back/**",
