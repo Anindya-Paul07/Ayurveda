@@ -5,15 +5,48 @@
         "src": "frontend/package.json",
         "use": "@vercel/static-build",
         "config": {
-          "distDir": "build"
+          "distDir": "build",
+          "installCommand": "npm ci",
+          "buildCommand": "npm run build",
+          "outputDirectory": "build"
         }
       },
       {
         "src": "back/app.py",
-        "use": "@vercel/python"
+        "use": "@vercel/python",
+        "config": {
+          "maxLambdaSize": "15mb",  // Increased for your dependencies
+          "runtime": "python3.9",
+          "includeFiles": [
+            "back/**",
+            "Data/**",
+            "herb/**",
+            "etc/**"
+          ],
+          "excludes": [
+            "**/__pycache__/**",
+            "**/*.pyc"
+          ]
+        }
       }
     ],
     "routes": [
+      {
+        "src": "/api/dosha",
+        "dest": "back/app.py"
+      },
+      {
+        "src": "/api/weather",
+        "dest": "back/app.py"
+      },
+      {
+        "src": "/api/recommendations/(.*)",
+        "dest": "back/app.py"
+      },
+      {
+        "src": "/api/health",
+        "dest": "back/app.py"
+      },
       {
         "src": "/api/(.*)",
         "dest": "back/app.py"
@@ -21,6 +54,20 @@
       {
         "src": "/(.*)",
         "dest": "/$1"
+      }
+    ],
+    "env": {
+      "PINECONE_API_KEY": "@pinecone_api_key",
+      "OPENAI_API_KEY": "@openai_api_key",
+      "CACHE_TTL": "3600",
+      "CACHE_MAXSIZE": "100",
+      "FLASK_ENV": "production",
+      "PORT": "8080"
+    },
+    "rewrites": [
+      {
+        "source": "/",
+        "destination": "/index.html"
       }
     ]
   }
