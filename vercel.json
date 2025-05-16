@@ -17,8 +17,22 @@
         "config": {
           "maxLambdaSize": "15mb",
           "runtime": "python3.9",
-          "installCommand": "pip install .",
-          "buildCommand": "python vercel_setup.py install"
+          "excludeFiles": [
+            "{.next,*.cache,node_modules,public,app}/**",
+            "**/__pycache__/**",
+            "**/*.pyc",
+            "**/*.pyo",
+            "**/*.pyd",
+            "**/tests/**",
+            "**/test_*.py",
+            "**/_test*.py",
+            "**/docs/**",
+            "**/examples/**",
+            "**/sample/**",
+            "**/demo/**",
+            "**/*.md",
+            "**/README*"
+          ]
         }
       }
     ],
