@@ -7,7 +7,7 @@ werkzeug==2.3.7
 
 # LangChain and AI
 langchain==0.1.0
-langchain-pinecone==0.0.15
+langchain-pinecone==0.2.6
 langchain-community==0.3.24
 langchain-openai==0.0.15
 langchain-experimental==0.0.15
