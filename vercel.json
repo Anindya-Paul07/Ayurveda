@@ -18,14 +18,14 @@
           "maxLambdaSize": "15mb",
           "runtime": "python3.9",
           "includeFiles": [
-            "back/**",
-            "Data/**",
-            "herb/**",
-            "etc/**"
+            "back/**"
           ],
           "excludes": [
             "**/__pycache__/**",
-            "**/*.pyc"
+            "**/*.pyc",
+            "**/venv/**",
+            "**/node_modules/**",
+            "**/.git/**"
           ]
         }
       }
