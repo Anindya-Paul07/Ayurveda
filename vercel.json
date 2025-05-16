@@ -16,17 +16,7 @@
         "use": "@vercel/python",
         "config": {
           "maxLambdaSize": "15mb",
-          "runtime": "python3.9",
-          "includeFiles": [
-            "back/**"
-          ],
-          "excludes": [
-            "**/__pycache__/**",
-            "**/*.pyc",
-            "**/venv/**",
-            "**/node_modules/**",
-            "**/.git/**"
-          ]
+          "runtime": "python3.9"
         }
       }
     ],
