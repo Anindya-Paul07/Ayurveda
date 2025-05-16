@@ -12,15 +12,13 @@
         }
       },
       {
-        "src": "back/app.py",
+        "src": "back/vercel_setup.py",
         "use": "@vercel/python",
         "config": {
           "maxLambdaSize": "15mb",
           "runtime": "python3.9",
-          "includeFiles": [
-            "back/**",
-            "back/__init__.py"
-          ]
+          "installCommand": "pip install .",
+          "buildCommand": "python vercel_setup.py install"
         }
       }
     ],
