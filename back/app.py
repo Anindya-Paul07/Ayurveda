@@ -27,7 +27,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Third-party imports
-from flask import Flask, render_template, jsonify, request, Request
+from flask import Flask, render_template, jsonify, request, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 from langchain_pinecone import PineconeVectorStore
@@ -114,7 +114,7 @@ def extract_remedies(disease, bot_answer):
 # -------------------------------------------------------------------------
 
 # Initialize Flask application with centralized configuration for integration with React frontend
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../frontend/build', static_url_path='')
 CORS(app)
 
 # Load environment variables from .env file to ensure free/open-source service integration
@@ -178,17 +178,13 @@ rag_chain = create_retrieval_chain(retriever, question_answer_chain)
 # Main Application Routes
 # -------------------------------------------------------------------------
 
-@app.route("/")
-def index():
-    """
-    Render the main chat interface with tracked diseases data.
-    
-    Returns:
-        Rendered HTML template with disease tracking data
-    """
-    app.logger.debug('Serving template: index.html')
-    return render_template('index.html', diseases=tracked_diseases)
-
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
 
 @app.route("/api/general", methods=["GET", "POST"])
 def chat():
@@ -345,7 +341,7 @@ def get_remedies():
 # Application Entry Point
 # -------------------------------------------------------------------------
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     """
     Start the Flask application with all registered blueprints.
     
@@ -358,6 +354,4 @@ if __name__ == '__main__':
     - /api/recommendations: Get personalized Ayurvedic recommendations (GET)
       based on dosha, season, and other factors
     """
-    app.template_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend', 'build')
-    app.static_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend', 'build', 'static')
-    app.run(host="0.0.0.0", port=8080, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)
