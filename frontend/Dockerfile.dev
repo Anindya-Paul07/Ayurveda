@@ -1,0 +1,36 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache git
+
+# Set environment variables
+ENV NODE_ENV=development
+ENV CHOKIDAR_USEPOLLING=true
+ENV WATCHPACK_POLLING=true
+
+# Install npm dependencies
+COPY package*.json ./
+
+# Install dependencies as root first
+RUN npm install && \
+    npm install -g postcss-cli autoprefixer
+
+
+RUN mkdir -p /home/node/.npm/_logs && \
+    chown -R node:node /home/node && \
+    chmod -R 755 /usr/local/lib/node_modules && \
+    chmod -R 755 /usr/local/bin
+
+# Copy application code
+COPY --chown=node:node . .
+
+# Switch to non-root user
+USER node
+
+# Set the PATH to include local node_modules/.bin
+ENV PATH="/app/node_modules/.bin:${PATH}"
+
+# Start development server
+CMD ["sh", "-c", "npm run build:css && npm start"]

@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from back.service.dosha_service import determine_dosha
+from service.dosha_service import determine_dosha
 
 # Create a blueprint for dosha-related routes
 dosha_blueprint = Blueprint('dosha', __name__)

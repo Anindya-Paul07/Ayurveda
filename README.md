@@ -1,13 +1,170 @@
-# ayurveda
-An AI Assistant which tells you the goodness of nature and how you can prevent and cure diseases, with personalized recommendations based on weather conditions.
+# Ayurveda AI Assistant
 
-## Features
+An AI-powered Ayurvedic assistant that provides personalized health recommendations based on traditional Ayurvedic practices, weather conditions, and your unique dosha profile.
 
-- **Ayurvedic Knowledge Base**: Access comprehensive information about herbs, remedies, and traditional Ayurvedic practices
-- **Disease Tracking**: The system tracks diseases mentioned in conversations and provides relevant remedies
-- **Dosha Determination**: Identify your Ayurvedic body type (Vata, Pitta, Kapha) through a questionnaire
-- **Weather-Based Recommendations**: Get personalized Ayurvedic recommendations based on real-time weather conditions in your location
-- **Google Search Fallback**: When the knowledge base doesn't have sufficient information, the system automatically searches the web
+## ✨ Features
+
+- **🌿 Ayurvedic Knowledge Base**: Comprehensive information about herbs, remedies, and traditional practices
+- **📊 Dosha Analysis**: Determine your Ayurvedic body type (Vata, Pitta, Kapha) through an interactive questionnaire
+- **🌦️ Weather-Adaptive**: Personalized recommendations based on real-time weather conditions
+- **🤖 AI-Powered Chat**: Interactive chat interface with both RAG and Agentic modes
+- **📈 Health Tracking**: Monitor your health metrics and track progress over time
+- **🔍 Smart Search**: Intelligent search across Ayurvedic knowledge base with web fallback
+- **📰 Article Service**: Discover and read Ayurveda-related articles with recommendations
+
+## 🚀 Quick Start with Docker
+
+The easiest way to get started is using Docker Compose.
+
+### Prerequisites
+
+- Docker 20.10.0+
+- Docker Compose 2.0.0+
+- Node.js 18+ (for development)
+- Python 3.11+ (for development)
+
+### Running with Docker Compose
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Anindya2369/ayurveda.git
+   cd ayurveda
+   ```
+
+2. Create a `.env` file in the root directory with your API keys:
+   ```bash
+   cp .env.example .env
+   # Edit the .env file with your API keys
+   ```
+
+3. Start the application:
+   ```bash
+   docker-compose up --build
+   ```
+
+4. Access the application:
+   - Frontend: http://localhost
+   - API Docs: http://localhost/api/docs
+
+### Development Setup
+
+For development, you can use the development containers:
+
+```bash
+# Start development services
+docker-compose up -d redis
+
+# Run backend in development mode
+docker-compose up backend-dev
+
+# In another terminal, run frontend in development mode
+docker-compose up frontend-dev
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Create a `.env` file in the root directory with the following variables:
+
+```ini
+# Required
+OPENAI_API_KEY=your_openai_api_key
+PINECONE_API_KEY=your_pinecone_api_key
+SERP_API_KEY=your_serp_api_key
+REDIS_URL=redis://redis:6379
+
+# Article Service
+NEWS_API_KEY=your_newsapi_key
+GOOGLE_SEARCH_API_KEY=your_google_search_key
+SEARCH_ENGINE_ID=your_search_engine_id
+
+# Optional
+NODE_ENV=development
+DEBUG=true
+```
+
+## 🏗️ Project Structure
+
+```
+ayurveda/
+├── back/                  # Backend (FlaskAPI)
+│   ├── app/               # Application code
+│   ├── data/              # Database files
+│   ├── routes/            # API route definitions
+│   ├── service/           # Business logic
+│   ├── tests/             # Backend tests
+│   ├── init_db.py         # Database initialization
+│   ├── seed_database.py   # Sample data population
+│   └── requirements.txt   # Python dependencies
+├── frontend/              # Frontend (React)
+│   ├── public/            # Static files
+│   ├── src/               # React source code
+│   └── package.json       # Frontend dependencies
+├── docker/                # Docker configuration
+├── docker-compose.yml     # Docker Compose configuration
+└── Dockerfile             # Production Dockerfile
+```
+
+## 📚 Documentation
+
+- [API Documentation](http://localhost/api/docs) (available when running locally)
+- [Article Service API](back/API_README.md) - Detailed documentation of the article endpoints
+- [Ayurveda Knowledge Base](docs/knowledge-base.md)
+
+## 🗄️ Database Setup
+
+The application uses SQLite for data persistence. To initialize and seed the database with sample data:
+
+```bash
+# Navigate to the backend directory
+cd back
+
+# Make the setup script executable
+chmod +x setup_database.sh
+
+# Run the setup script
+./setup_database.sh
+```
+
+This will:
+1. Create the necessary database tables
+2. Seed the database with sample articles
+3. Set up initial categories and tags
+
+## 🆕 Article Service
+
+The Article Service provides functionality to discover, manage, and recommend Ayurveda-related articles. Key features include:
+
+- **Article Discovery**: Fetch articles from various sources (NewsAPI, Google Search, RSS feeds)
+- **Content Processing**: Extract and analyze article content
+- **Recommendations**: Get personalized article recommendations
+- **Engagement Tracking**: Track views, likes, and shares
+
+### API Endpoints
+
+See the [Article Service API Documentation](back/API_README.md) for a complete list of available endpoints and usage examples.
+
+### Adding New Articles
+
+New articles can be added through the API or by extending the `seed_database.py` script. The system supports:
+- Rich text content
+- Categories and tags
+- Featured articles
+- Article metrics (views, likes, shares)
+
+### Customization
+
+To customize the article sources or processing logic, modify the `ArticleFetcher` and `ArticleProcessor` classes in `back/service/article_service.py`.
+- [Development Guide](docs/development.md)
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on how to submit pull requests.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## How to run?
 ### steps:

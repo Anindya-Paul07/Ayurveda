@@ -13,8 +13,6 @@ def get_requirements():
 package_data = {
     'back': [
         '*.py',
-        'templates/*',
-        'static/*'
     ]
 }
 

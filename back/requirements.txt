@@ -1,24 +1,41 @@
 # Core Dependencies
-flask
-flask_cors
-gunicorn
-python-dotenv
-werkzeug
+flask>=2.0.0
+flask-cors>=3.0.10
+gunicorn>=20.1.0
+python-dotenv>=0.19.0
+werkzeug>=2.0.0
+flask-sqlalchemy>=3.0.0
+flask-migrate>=4.0.0
+flask-login>=0.6.0
+flask-jwt-extended>=4.3.1
+flask-mail>=0.9.1
+flask-caching>=2.0.0
+flask-apscheduler>=1.12.4
+flask-limiter>=2.8.0
+psycopg2-binary>=2.9.1
+email-validator>=1.3.0
 
-# LangChain and AI
+# LangChain
 langchain
-langchain-community
-langchain-openai
-langchain-pinecone
-langchain-experimental
-openai
-pinecone-client[grpc]
+langchain_community
+langchain_core
+langchain_openai
+langchain_pinecone
+langchain_experimental>=0.0.41
+langchain_huggingface
+pinecone_client
+langchain_experimental>=0.0.41
+
+# Agent Dependencies
+langgraph
+langserve
+langsmith
 
 # Data Processing
-sentence-transformers
+sentence_transformers
 beautifulsoup4
 requests
-google-search-results
+google_search_results
 pypdf
 huggingface_hub
 
@@ -26,5 +43,21 @@ huggingface_hub
 redis
 cachetools
 
-# Optional - Only for local development
-# pytest
+# Database
+sqlalchemy
+psycopg2-binary
+
+# gRPC Dependencies
+protobuf>=3.20.0
+grpcio>=1.60.0
+
+# Real-time Communication
+eventlet
+flask_socketio
+python_socketio
+python_engineio
+
+# Testing
+django
+pytest
+pytest_cov

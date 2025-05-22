@@ -8,9 +8,9 @@ integrate dosha determination and weather data.
 """
 
 from flask import Blueprint, request, jsonify
-from ..service.recommendation_service import get_recommendations
-from ..service.weather_service import get_weather_data, determine_season
-from ..service.dosha_service import determine_dosha
+from service.recommendation_service import get_recommendations
+from service.weather_service import get_weather_data, determine_season
+from service.dosha_service import determine_dosha
 
 # Create a Blueprint for recommendations routes
 recommendations_bp = Blueprint('recommendations', __name__)

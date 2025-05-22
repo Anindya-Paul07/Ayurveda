@@ -20,32 +20,39 @@ free and open-source options.
 
 # Standard library imports
 import os
-import re
 import sys
+import eventlet
+eventlet.monkey_patch()  # Required for WebSocket support
 
 # Add parent directory to path to allow imports from sibling directories
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Third-party imports
-from flask import Flask, render_template, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
 from dotenv import load_dotenv
 from langchain_pinecone import PineconeVectorStore
 from langchain_openai import ChatOpenAI
-from langchain.chains import create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 
 # Local application imports
-from back.service.helper import download_hugging_face_embeddings
-from back.service.prompt import system_prompt
-from back.service.google_search import execute_google_search
+from config import config
+
+# Local application imports
+from service.helper import download_hugging_face_embeddings
+from service.prompt import system_prompt, prompt
+from service.google_search import execute_google_search
+from service.agent_service import agent_service
+from service.metrics_service import metrics_service
 
 # Import blueprints from routes modules
-from back.routes.dosha_routes import dosha_blueprint
-from back.routes.weather_routes import weather_bp
-from back.routes.recommendations_routes import recommendations_bp
-from back.routes.health_routes import health_bp
+from routes.dosha_routes import dosha_blueprint
+from routes.health_routes import health_bp
+from routes.weather_routes import weather_bp
+from routes.recommendations_routes import recommendations_bp
+from routes.metrics_routes import init_metrics_routes
+from routes.article_routes import article_bp
 
 # -------------------------------------------------------------------------
 # Disease and Remedy Tracking System
@@ -113,78 +120,121 @@ def extract_remedies(disease, bot_answer):
 # Flask Application Setup
 # -------------------------------------------------------------------------
 
-# Initialize Flask application with centralized configuration for integration with React frontend
-app = Flask(__name__, static_folder='../frontend/build', static_url_path='')
-CORS(app)
+def create_app(config_name=None):
+    """
+    Application factory function.
+    
+    Args:
+        config_name (str): The configuration to use ('development', 'testing', 'production')
+        
+    Returns:
+        tuple: (app, socketio) - Flask application and SocketIO instance
+    """
+    # Initialize the Flask application
+    app = Flask(__name__, static_folder='../frontend/build', static_url_path='/static')
+    
+    # Load configuration
+    if config_name is None:
+        config_name = os.getenv('FLASK_ENV', 'development')
+    app.config.from_object(config[config_name])
+    
+    # Initialize extensions
+    from extensions import init_extensions, db, socketio, login_manager
+    init_extensions(app)
+    
+    # Register teardown handler
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        db.session.remove()
+    
+    # Initialize metrics service
+    from service.metrics_service import metrics_service
+    metrics_service.initialize(app)  # Pass app for any route registration
 
-# Load environment variables from .env file to ensure free/open-source service integration
-load_dotenv()
+    # Register blueprints for the API endpoints
+    # Each blueprint encapsulates a specific domain of functionality
+    app.register_blueprint(dosha_blueprint, url_prefix='/api/dosha')
+    app.register_blueprint(weather_bp, url_prefix='/api/weather')
+    app.register_blueprint(recommendations_bp, url_prefix='/api/recommendations')
+    app.register_blueprint(health_bp, url_prefix='/api/health')
+    app.register_blueprint(article_bp, url_prefix='')
+    
+    # Initialize metrics routes with socketio
+    metrics_bp = init_metrics_routes(socketio)
+    app.register_blueprint(metrics_bp, url_prefix='/api/metrics')
 
-# Register blueprints for the API endpoints
-# Each blueprint encapsulates a specific domain of functionality
-app.register_blueprint(dosha_blueprint)  # /api/dosha - Determines user's dosha based on questionnaire
-app.register_blueprint(weather_bp)       # /api/weather - Provides weather data for location-based recommendations
-app.register_blueprint(recommendations_bp)  # /api/recommendations - Delivers personalized Ayurvedic recommendations
-app.register_blueprint(health_bp)
+    # -------------------------------------------------------------------------
+    # Vector Store and LLM Setup for RAG
+    # -------------------------------------------------------------------------
 
-# Note: Detailed API documentation is available in the docstrings of each route
+    # Set up API keys from environment variables
+    PINECONE_API_KEY = os.environ.get('PINECONE_API_KEY')
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 
-# -------------------------------------------------------------------------
-# Vector Store and LLM Setup for RAG
-# -------------------------------------------------------------------------
+    # Ensure environment variables are set for libraries that read directly from os.environ
+    os.environ["PINECONE_API_KEY"] = PINECONE_API_KEY
+    os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
-# Set up API keys from environment variables
-PINECONE_API_KEY = os.environ.get('PINECONE_API_KEY')
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+    # Download and initialize embeddings model
+    embeddings = download_hugging_face_embeddings()
 
-# Ensure environment variables are set for libraries that read directly from os.environ
-os.environ["PINECONE_API_KEY"] = PINECONE_API_KEY
-os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+    # Connect to existing Pinecone vector store index
+    index_name = "herbbot"
+    docsearch = PineconeVectorStore.from_existing_index(
+        index_name=index_name,
+        embedding=embeddings
+    )
 
-# Download and initialize embeddings model
-embeddings = download_hugging_face_embeddings()
+    # Create a retriever with similarity search
+    retriever = docsearch.as_retriever(search_type="similarity", search_kwargs={"k":3})
 
-# Connect to existing Pinecone vector store index
-index_name = "herbbot"
-docsearch = PineconeVectorStore.from_existing_index(
-    index_name=index_name,
-    embedding=embeddings
-)
+    # Initialize the LLM (using Groq's API with Llama model)
+    llm = ChatOpenAI(
+        openai_api_base="https://api.groq.com/openai/v1",
+        model_name="llama-3.3-70b-versatile",
+        api_key=os.getenv("OPENAI_API_KEY"),
+        temperature=0.4,
+        max_tokens=1024
+    )
 
-# Create a retriever with similarity search
-retriever = docsearch.as_retriever(search_type="similarity", search_kwargs={"k":3})
+    # Create a prompt template with system and user messages
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("human", "{input}"),
+    ])
 
-# Initialize the LLM (using Groq's API with Llama model)
-llm = ChatOpenAI(
-    openai_api_base="https://api.groq.com/openai/v1",
-    model_name="llama-3.3-70b-versatile",
-    api_key=os.getenv("OPENAI_API_KEY"),
-    temperature=0.4,
-    max_tokens=1024
-)
+    # Set up the RAG pipeline
+    from langchain.chains import create_retrieval_chain
+    from langchain.chains.combine_documents import create_stuff_documents_chain
 
-# Create a prompt template with system and user messages
-prompt = ChatPromptTemplate.from_messages([
-    ("system", system_prompt),
-    ("human", "{input}"),
-])
+    # Create the document chain
+    combine_docs_chain = create_stuff_documents_chain(
+        llm=llm,
+        prompt=prompt,
+        document_variable_name="context"
+    )
 
-# Set up the RAG pipeline
-question_answer_chain = create_stuff_documents_chain(llm, prompt)
-rag_chain = create_retrieval_chain(retriever, question_answer_chain)
+    # Create the RAG chain
+    rag_chain = create_retrieval_chain(
+        retriever=retriever,
+        combine_docs_chain=combine_docs_chain
+    )
 
+    return app, socketio, rag_chain
 
 # -------------------------------------------------------------------------
 # Main Application Routes
 # -------------------------------------------------------------------------
+
+# Create the application instance
+app, socketio, rag_chain = create_app()
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
     if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
         return send_from_directory(app.static_folder, path)
-    else:
-        return send_from_directory(app.static_folder, 'index.html')
+    return send_from_directory(app.static_folder, 'index.html')
 
 @app.route("/api/general", methods=["GET", "POST"])
 def chat():
@@ -207,104 +257,166 @@ def chat():
         200: Successful response
         400: Invalid input
     """
-    # Parse and validate the request data
-    print('Raw request data:', request.data)
     try:
         data = request.get_json()
-        print('Parsed JSON data:', data)
-    except Exception as e:
-        print('JSON parsing error:', str(e))
-        return jsonify({'error': 'Invalid JSON format'}), 400
-    
-    if not data or 'message' not in data:
-        print('Missing "message" field in data:', data)
-        return jsonify({'error': "Missing 'message' field"}), 400
-    
-    # Extract the user message
-    msg = data.get('message')
-    print(f"Received message: {msg}")
-    
-    # Process the message through the RAG pipeline with error handling
-    try:
+        if not data or 'message' not in data:
+            return jsonify({'error': 'Invalid request body'}), 400
+            
+        msg = data['message']
+        start_time = time.time()
+        
+        # Get response from RAG chain
         response = rag_chain.invoke({"input": msg})
+        response_time = time.time() - start_time
+        
+        # Track metrics if metrics_service is available
+        if hasattr(metrics_service, 'track_rag_request'):
+            metrics_service.track_rag_request(
+                response_time,
+                response.get("metrics", {}).get("tool_usage", {})
+            )
+        
+        answer = response.get("answer", "")
+        
+        # Fallback to Google search if the local context was insufficient
+        if not answer or any(phrase in answer.lower() for phrase in ["don't know", "i don't have"]):
+            google_result = execute_google_search(msg)
+            answer = f"Based on my search: {google_result}"
+        
+        print(f"Response: {answer}")
+        
+        # Track diseases and remedies mentioned in the conversation
+        if 'tracked_diseases' in globals():
+            track_disease(msg, answer)
+            track_remedy(msg, answer)
+        
+        # Return the response to the client
+        return jsonify({"response": answer})
+        
     except Exception as e:
-        print('Error during rag_chain.invoke:', str(e))
+        print(f'Error in chat endpoint: {str(e)}')
         return jsonify({"error": "Internal server error while processing your message. Please try again later."}), 500
-    answer = response.get("answer")
-    
-    # Fallback to Google search if the local context was insufficient
-    if not answer or "don't know" in answer.lower() or "i don't have" in answer.lower():
-        google_result = execute_google_search(msg)
-        answer = f"Based on my search: {google_result}"
-    
-    print(f"Response: {answer}")
-    
-    # Track diseases and remedies mentioned in the conversation
-    track_disease(msg, answer)
-    track_remedy(msg, answer)
-    
-    # Return the response to the client
-    return jsonify({"response": answer})
 
 def track_remedy(user_msg, bot_answer):
     """
-    Dedicated function to identify and track potential remedies in bot answers.
+    Track remedies mentioned in the conversation.
     
-    This function analyzes the bot's response for specific remedy patterns and
-    associates them with diseases mentioned in the conversation. It maintains
-    a structured database of remedies for later retrieval.
+    This function extracts and stores remedies from the bot's responses
+    for later reference and analysis.
     
     Args:
         user_msg (str): The user's message
-        bot_answer (str): The bot's response to analyze
+        bot_answer (str): The bot's response
     """
-    # Look for specific remedy patterns in the answer
-    remedy_patterns = [
-        # Pattern for lists of remedies
-        r"\d+\.\s+([^.]+)",
-        # Pattern for "take X for Y" statements
-        r"take\s+([^.]+)\s+for\s+([^.]+)",
-        # Pattern for "X is beneficial for Y" statements
-        r"([^.]+)\s+is\s+beneficial\s+for\s+([^.]+)",
-        # Pattern for "X helps with Y" statements
-        r"([^.]+)\s+helps\s+with\s+([^.]+)"
-    ]
+    # Simple extraction of remedies (can be enhanced with NLP)
+    remedies = []
     
-    # Check for disease mentions in the user message or bot answer
-    disease_keywords = ['diabetes', 'hypertension', 'cancer', 'asthma', 'arthritis',
-                        'cold fever', 'cancer', 'tumor']
-    mentioned_diseases = []
+    # Look for common remedy patterns
+    if "take" in bot_answer.lower() or "try" in bot_answer.lower():
+        # Simple pattern matching - in a real app, use NLP for better extraction
+        remedies = re.findall(r'(?:take|try|use|apply)\s+([^.,;]+?)(?=[.,;]|$)', bot_answer, re.IGNORECASE)
     
-    for disease in disease_keywords:
-        if disease in user_msg.lower() or disease in bot_answer.lower():
-            mentioned_diseases.append(disease)
-    
-    # If no specific disease is mentioned, check for general remedy information
-    if not mentioned_diseases:
-        if any(re.search(pattern, bot_answer) for pattern in remedy_patterns):
-            if "general_remedies" not in tracked_diseases:
-                tracked_diseases["general_remedies"] = {
-                    'full_responses': [],
-                    'remedies': []
-                }
-            tracked_diseases["general_remedies"]['full_responses'].append(bot_answer)
-            tracked_diseases["general_remedies"]['remedies'].append(bot_answer)
-    else:
-        # For each mentioned disease, check if the answer contains remedy information
-        for disease in mentioned_diseases:
-            # Ensure the disease entry exists with the proper structure
-            if disease not in tracked_diseases:
-                tracked_diseases[disease] = {
-                    'full_responses': [],
-                    'remedies': []
-                }
-            
-            # Check if the answer contains specific remedy patterns
-            if any(re.search(pattern, bot_answer) for pattern in remedy_patterns):
-                # Add to remedies if not already present
-                if bot_answer not in tracked_diseases[disease]['remedies']:
-                    tracked_diseases[disease]['remedies'].append(bot_answer)
+    if remedies:
+        # Clean up the extracted remedies
+        remedies = [r.strip() for r in remedies if len(r.strip()) > 10]  # Filter out very short matches
+        
+        # Store in tracked_diseases under a general category
+        if 'general_remedies' not in tracked_diseases:
+            tracked_diseases['general_remedies'] = {
+                'count': 0,
+                'remedies': [],
+                'full_responses': []
+            }
+        
+        tracked_diseases['general_remedies']['count'] += 1
+        tracked_diseases['general_remedies']['remedies'].extend(remedies)
+        tracked_diseases['general_remedies']['full_responses'].append(bot_answer)
+        
+        # Also associate with specific diseases if mentioned in the user's message
+        for disease in tracked_diseases:
+            if disease.lower() in user_msg.lower() and disease != 'general_remedies':
+                if disease not in tracked_diseases:
+                    tracked_diseases[disease] = {
+                        'full_responses': [],
+                        'remedies': []
+                    }
+                tracked_diseases[disease]['remedies'].extend(remedies)
+                if any(re.search(pattern, bot_answer) for pattern in remedy_patterns):
+                    # Add to remedies if not already present
+                    if bot_answer not in tracked_diseases[disease]['remedies']:
+                        tracked_diseases[disease]['remedies'].append(bot_answer)
 
+@app.route("/api/agent", methods=["GET", "POST"])
+def agent_chat():
+    """
+    Agent chat endpoint that processes user messages using the agentic framework.
+    
+    Returns:
+        JSON response with the agent's output and metrics
+    """
+    try:
+        data = request.get_json()
+        if not data or 'message' not in data:
+            return jsonify({'error': 'Message is required'}), 400
+            
+        msg = data.get("message")
+        start_time = time.time()
+        
+        # Create a tool calling agent with the available tools
+        agent = create_tool_calling_agent(
+            llm=ChatOpenAI(
+                openai_api_base="https://api.groq.com/openai/v1",
+                model_name="llama-3.3-70b-versatile",
+                api_key=os.getenv("OPENAI_API_KEY"),
+                temperature=0.4,
+                max_tokens=1024),
+            tools=agent_service.tools,
+            prompt=prompt
+        )
+        
+        # Create agent executor
+        agent_executor = AgentExecutor(
+            agent=agent,
+            tools=agent_service.tools,
+            verbose=True
+        )
+        
+        # Get response
+        response = agent_executor.invoke({"input": msg})
+        
+        response_time = time.time() - start_time
+        
+        # Track metrics if metrics_service is available
+        if hasattr(metrics_service, 'track_agent_request'):
+            metrics_service.track_agent_request(
+                response_time,
+                response.get("metrics", {}).get("tool_usage", {})
+            )
+        
+        return jsonify({
+            "response": response.get("output", ""),
+            "metrics": response.get("metrics", {})
+        })
+        
+    except Exception as e:
+        print(f'Error in agent chat endpoint: {str(e)}')
+        return jsonify({"error": "Internal server error while processing your message with the agent."}), 500
+
+@app.route('/api/metrics/comparison', methods=['GET'])
+def get_comparison_metrics():
+    """
+    Get comparison metrics between RAG and Agent implementations.
+    
+    Returns:
+        JSON response with performance comparison metrics
+    """
+    try:
+        if hasattr(metrics_service, 'get_comparison_metrics'):
+            return jsonify(metrics_service.get_comparison_metrics())
+        return jsonify({"error": "Metrics service not available"}), 503
+    except Exception as e:
+        print(f'Error getting comparison metrics: {str(e)}')
+        return jsonify({"error": "Failed to retrieve metrics"}), 500
 
 @app.route('/api/remedies', methods=['GET'])
 def get_remedies():
@@ -323,35 +435,48 @@ def get_remedies():
             "general_remedies": ["Turmeric is beneficial for..."]
         }
     """
-    # Create a simplified version of tracked_diseases for the frontend
-    # The frontend expects a structure where each disease maps to a list of remedies
-    simplified_remedies = {}
-    
-    for disease, data in tracked_diseases.items():
-        # If we have specific remedies extracted, use those
-        if data['remedies']:
-            simplified_remedies[disease] = data['remedies']
-        # Otherwise fall back to full responses
-        elif data['full_responses']:
-            simplified_remedies[disease] = data['full_responses']
-    
-    return jsonify(simplified_remedies)
+    try:
+        # Check if tracked_diseases exists
+        if 'tracked_diseases' not in globals():
+            return jsonify({"error": "No remedies data available"}), 404
+            
+        # Create a simplified version of tracked_diseases for the frontend
+        simplified_remedies = {}
+        
+        for disease, data in tracked_diseases.items():
+            # If we have specific remedies extracted, use those
+            if data.get('remedies'):
+                simplified_remedies[disease] = data['remedies']
+            # Otherwise fall back to full responses
+            elif data.get('full_responses'):
+                simplified_remedies[disease] = data['full_responses']
+        
+        return jsonify(simplified_remedies)
+        
+    except Exception as e:
+        print(f'Error retrieving remedies: {str(e)}')
+        return jsonify({"error": "Failed to retrieve remedies"}), 500
 
-# -------------------------------------------------------------------------
-# Application Entry Point
-# -------------------------------------------------------------------------
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint for monitoring and orchestration."""
+    return jsonify({"status": "healthy"})
 
-if __name__ == "__main__":
-    """
-    Start the Flask application with all registered blueprints.
+if __name__ == '__main__':
+    # Create application instance
+    app, socketio = create_app()
     
-    Available API endpoints:
-    - / : Main web interface for the Ayurveda chatbot
-    - /api/general: General chat endpoint for Ayurvedic information
-    - /api/remedies: Get tracked remedies for various diseases
-    - /api/dosha: Determine user's dosha based on questionnaire (POST)
-    - /api/weather: Get weather data for a location (GET)
-    - /api/recommendations: Get personalized Ayurvedic recommendations (GET)
-      based on dosha, season, and other factors
-    """
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    # Get configuration from app
+    port = int(os.environ.get('PORT', 5000))
+    debug = app.config.get('DEBUG', False)
+    
+    # Log startup information
+    print(f"Starting Ayurveda AI Backend on port {port} (debug={debug})")
+    print(f"Environment: {os.environ.get('FLASK_ENV', 'development')}")
+    
+    # Run the application with Socket.IO
+    socketio.run(app, 
+                host='0.0.0.0', 
+                port=port, 
+                debug=debug,
+                use_reloader=debug)
