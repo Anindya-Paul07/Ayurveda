@@ -486,7 +486,9 @@ const ChatPage = ({ userData }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
-  const messegesEndRef = useRef(null);
+  const [diseasePrediction, setDiseasePrediction] = useState(null);
+  const [showDiseaseDialog, setShowDiseaseDialog] = useState(false);
+  const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const emojiPickerRef = useRef(null);
   
@@ -516,47 +518,7 @@ const ChatPage = ({ userData }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   
-  // Handle sending a new message
-  const handleSendMessege = (e) => {
-    e?.preventDefault();
-    if (!newMessage.trim()) return;
-    
-    const message = {
-      id: Date.now().toString(),
-      content: newMessage,
-      sender: 'user',
-      timestamp: new Date(),
-      status: 'sent',
-      replyingTo,
-      reactions: [],
-    };
-    
-    setMessages(prev => [...prev, message]);
-    setNewMessage('');
-    setReplyingTo(null);
-    setShowEmojiPicker(false);
-    
-    // Simulate typing indicator after a short delay
-    setTimeout(() => {
-      setIsTyping(true);
-      
-      // Simulate bot response after a delay
-      setTimeout(() => {
-        setIsTyping(false);
-        
-        const botMessage = {
-          id: Date.now().toString(),
-          content: 'I am your Ayurveda assistant. How can I help you today?',
-          sender: 'bot',
-          timestamp: new Date(),
-          status: 'delivered',
-          reactions: [],
-        };
-        
-        setMessages(prev => [...prev, botMessage]);
-      }, 1500);
-    }, 1000);
-  };
+  // Handle sending a new message - single implementation
   
   // Handle adding emoji to message
   const handleAddEmoji = (emoji) => {
@@ -623,55 +585,54 @@ const ChatPage = ({ userData }) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-  const [diseasePrediction, setDiseasePrediction] = useState(null);
-  const [showDiseaseDialog, setShowDiseaseDialog] = useState(false);
-  const messagesEndRef = useRef(null);
 
-  // Initial greeting
+  // Initial greeting - only set if no messages exist
   useEffect(() => {
-    const initialMessages = [
-      {
-        id: uuidv4(),
-        text: 'Namaste! I\'m your Ayurvedic health assistant. How can I help you today?',
-        isBot: true,
-        timestamp: new Date(),
-        type: 'text'
-      },
-      {
-        id: uuidv4(),
-        text: 'You can ask me about symptoms, get health advice, or learn about Ayurvedic remedies.',
-        isBot: true,
-        timestamp: new Date(),
-        type: 'suggestions',
-        suggestions: [
-          'I have a headache',
-          'What\'s my dosha?',
-          'Suggest herbs for digestion',
-          'How to reduce stress?'
-        ]
-      }
-    ];
-    setMessages(initialMessages);
-  }, []);
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (messages.length === 0) {
+      const initialMessages = [
+        {
+          id: '1',
+          content: 'Namaste! I\'m your Ayurvedic health assistant. How can I help you today?',
+          sender: 'bot',
+          timestamp: new Date(),
+          status: 'delivered',
+          type: 'text',
+          reactions: []
+        },
+        {
+          id: '2',
+          content: 'You can ask me about symptoms, get health advice, or learn about Ayurvedic remedies.',
+          sender: 'bot',
+          timestamp: new Date(),
+          status: 'delivered',
+          type: 'suggestions',
+          suggestions: [
+            'I have a headache',
+            'What\'s my dosha?',
+            'Suggest herbs for digestion',
+            'How to reduce stress?'
+          ],
+          reactions: []
+        }
+      ];
+      setMessages(initialMessages);
+    }
+  }, [messages.length]);
 
   // Generate typing indicator
   useEffect(() => {
     if (isTyping) {
       const typingMessage = {
         id: 'typing',
-        text: '...',
-        isBot: true,
+        content: '...',
+        sender: 'bot',
         isTyping: true,
         timestamp: new Date(),
-        type: 'typing'
+        type: 'typing',
+        status: 'sending'
       };
       
-      setMessages(prev => [...prev, typingMessage]);
+      setMessages(prev => [...prev.filter(msg => msg.id !== 'typing'), typingMessage]);
       
       return () => {
         setMessages(prev => prev.filter(msg => msg.id !== 'typing'));
@@ -679,78 +640,88 @@ const ChatPage = ({ userData }) => {
     }
   }, [isTyping]);
 
-  const handleSendMessage = async (text) => {
-    if (!text.trim()) return;
+  // Handle sending a new message
+  const handleSendMessage = async (e) => {
+    e?.preventDefault();
+    const text = newMessage.trim();
+    if (!text) return;
     
+    // Create user message
     const userMessage = {
-      id: uuidv4(),
-      text,
-      isBot: false,
+      id: Date.now().toString(),
+      content: text,
+      sender: 'user',
       timestamp: new Date(),
-      type: 'text'
+      status: 'sent',
+      type: 'text',
+      reactions: [],
+      replyingTo: replyingTo ? {
+        id: replyingTo.id,
+        content: replyingTo.content,
+        sender: replyingTo.sender
+      } : null
     };
     
-    setMessages(prev => [...prev, userMessage]);
-    setInputValue('');
+    // Add user message and clear input
+    setMessages(prev => [...prev.filter(msg => msg.id !== 'typing'), userMessage]);
+    setNewMessage('');
+    setReplyingTo(null);
+    setShowEmojiPicker(false);
     setIsTyping(true);
     
     try {
-      // Call the agent service
-      const response = await api.post('/api/chat', {
-        message: text,
-        userId: userData?.id,
-        context: {
-          previousMessages: messages.slice(-5).map(m => ({
-            role: m.isBot ? 'assistant' : 'user',
-            content: m.text
-  })),
-          userData: userData || {}
-        }
-      });
+      // Simulate bot response after a delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      const botResponse = {
-        id: uuidv4(),
-        text: response.data.message,
-        isBot: true,
+      // Default bot response
+      let botResponse = {
+        id: Date.now().toString(),
+        content: 'I am your Ayurveda assistant. How can I help you today?',
+        sender: 'bot',
         timestamp: new Date(),
+        status: 'delivered',
         type: 'text',
-        metadata: response.data.metadata
+        reactions: []
       };
       
-      // Check if the response includes a disease prediction
-      if (response.data.metadata?.isDiseasePrediction) {
-        setDiseasePrediction({
-          condition: response.data.metadata.condition,
-          confidence: response.data.metadata.confidence,
-          symptoms: response.data.metadata.symptoms || [],
-          recommendations: response.data.metadata.recommendations || []
-        });
-        setShowDiseaseDialog(true);
+      // Check for specific queries
+      const lowerText = text.toLowerCase();
+      
+      if (lowerText.includes('dosha') || lowerText.includes('analysis')) {
+        botResponse.content = 'I can help you with a dosha analysis. Would you like to take a quick test to determine your dosha type?';
+        botResponse.type = 'suggestions';
+        botResponse.suggestions = [
+          'Yes, start the test',
+          'What are the dosha types?',
+          'Not now'
+        ];
+      } else if (lowerText.includes('headache') || lowerText.includes('pain')) {
+        botResponse.content = 'For headaches, you might want to try these Ayurvedic remedies: \n\n' +
+          '1. Apply a paste of sandalwood or eucalyptus oil on the forehead.\n' +
+          '2. Drink ginger tea with honey.\n' +
+          '3. Practice deep breathing exercises.\n\n' +
+          'Would you like more detailed information about any of these remedies?';
+      } else if (lowerText.includes('stress') || lowerText.includes('anxiety')) {
+        botResponse.content = 'To reduce stress and anxiety, consider these Ayurvedic practices:\n\n' +
+          '1. Practice Pranayama (breathing exercises)\n' +
+          '2. Try meditation for 10-15 minutes daily\n' +
+          '3. Drink warm milk with a pinch of turmeric before bed\n\n' +
+          'Would you like me to guide you through a quick relaxation exercise?';
       }
       
-      // Add any follow-up suggestions
-      if (response.data.suggestions?.length > 0) {
-        const suggestionsMessage = {
-          id: uuidv4(),
-          text: 'You might want to know:',
-          isBot: true,
-          timestamp: new Date(),
-          type: 'suggestions',
-          suggestions: response.data.suggestions
-        };
-        setMessages(prev => [...prev, botResponse, suggestionsMessage]);
-      } else {
-        setMessages(prev => [...prev, botResponse]);
-      }
-      
+      setMessages(prev => [...prev.filter(msg => msg.id !== 'typing'), botResponse]);
     } catch (error) {
       console.error('Error sending message:', error);
+      enqueueSnackbar('Failed to send message', { variant: 'error' });
+      
+      // Add error message
       const errorMessage = {
-        id: uuidv4(),
-        text: 'Sorry, I encountered an error. Please try again later.',
-        isBot: true,
+        id: Date.now().toString(),
+        content: 'Sorry, I encountered an error. Please try again later.',
+        sender: 'bot',
         timestamp: new Date(),
-        type: 'error'
+        status: 'error',
+        type: 'text'
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -759,12 +730,12 @@ const ChatPage = ({ userData }) => {
   };
   
   const handleSuggestionClick = (suggestion) => {
-    handleSendMessege(suggestion);
+    handleSendMessage(suggestion);
   };
   
   const handleStartDoshaAnalysis = () => {
     // Navigate to Dosha Analysis tab or start a guided analysis in chat
-    handleSendMessege("I'd like to take a dosha analysis test.");
+    handleSendMessage("I'd like to take a dosha analysis test.");
   };
   
   const handleCloseDiseaseDialog = () => {
